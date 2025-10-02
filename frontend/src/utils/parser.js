@@ -151,7 +151,7 @@ function processStatements(statements, prevNodeId, exitId, xPosition, yPosition,
   let currentNodeId = prevNodeId;
   let currentY = yPosition;
 
-  statements.forEach((stmt, index) => {
+  statements.forEach((stmt) => {
     const result = processStatement(stmt, currentNodeId, exitId, xPosition, currentY, nodes, edges);
     currentNodeId = result.lastNodeId;
     currentY = result.yPosition;
@@ -161,9 +161,6 @@ function processStatements(statements, prevNodeId, exitId, xPosition, yPosition,
 }
 
 function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges) {
-  let currentNodeId = prevNodeId;
-  let currentY = yPosition;
-
   switch (stmt.type) {
     case 'IfStatement':
       return processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges);
@@ -182,7 +179,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
           startLine: stmt.loc?.start.line,
           endLine: stmt.loc?.end.line,
         },
-        position: { x: xPosition, y: currentY },
+        position: { x: xPosition, y: yPosition },
         style: { background: '#ffc107', border: '2px solid #ff9800' },
       });
       
@@ -200,7 +197,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
         type: 'smoothstep',
       });
 
-      return { lastNodeId: returnNodeId, yPosition: currentY + 100 };
+      return { lastNodeId: returnNodeId, yPosition: yPosition + 100 };
     
     default:
       // Regular statement
@@ -215,7 +212,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
           startLine: stmt.loc?.start.line,
           endLine: stmt.loc?.end.line,
         },
-        position: { x: xPosition, y: currentY },
+        position: { x: xPosition, y: yPosition },
       });
       
       edges.push({
@@ -225,7 +222,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
         type: 'smoothstep',
       });
 
-      return { lastNodeId: nodeId, yPosition: currentY + 100 };
+      return { lastNodeId: nodeId, yPosition: yPosition + 100 };
   }
 }
 
