@@ -38,6 +38,8 @@ The project is structured into two main components:
 - **Node.js 14+** (for frontend)
 - **npm** or **yarn**
 
+> **Windows Users**: See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows-specific setup instructions.
+
 ### Backend Setup
 
 1. Navigate to the backend directory:
@@ -148,6 +150,18 @@ NT547/
 ## 🖼️ Screenshots
 
 (Screenshots will be added after deployment)
+
+## 🖼️ Screenshots
+
+### Initial Interface
+![CFG Visualizer Initial View](https://github.com/user-attachments/assets/af5b4545-45c9-4a2d-a7d6-a5ffb2945c08)
+
+### Control Flow Graph Visualization
+![CFG Visualization](https://github.com/user-attachments/assets/a9dc6dce-95be-4822-ae5f-9ce4fa493047)
+
+### Interactive Node Selection
+![Interactive Feature](https://github.com/user-attachments/assets/52245b2d-8e4d-4a70-a778-031130d04a94)
+*Clicking on nodes highlights corresponding code lines*
 
 ## 🛠️ Development
 

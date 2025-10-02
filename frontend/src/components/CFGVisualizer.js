@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -24,8 +24,16 @@ function CFGVisualizer({ cfgData, onNodeClick }) {
     return cfgData.edges;
   }, [cfgData]);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Update nodes and edges when cfgData changes
+  useEffect(() => {
+    if (cfgData) {
+      setNodes(cfgData.nodes || []);
+      setEdges(cfgData.edges || []);
+    }
+  }, [cfgData, setNodes, setEdges]);
 
   const onNodeClickHandler = useCallback(
     (event, node) => {
