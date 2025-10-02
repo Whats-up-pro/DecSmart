@@ -1,0 +1,14 @@
+.code-editor {
+  flex: 1;
+  overflow: hidden;
+}
+
+.highlighted-line {
+  background-color: rgba(255, 200, 0, 0.3);
+}
+
+.highlighted-glyph {
+  background-color: #ffc800;
+  width: 5px !important;
+  margin-left: 3px;
+}
