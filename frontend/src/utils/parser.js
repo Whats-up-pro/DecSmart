@@ -22,19 +22,27 @@ export function parseSolidityCode(code) {
     const nodes = [];
     const edges = [];
     const functionGraphs = [];
+    let currentContractName = '';
 
     // Visit all function definitions
     parser.visit(ast, {
-      FunctionDefinition(node) {
-        const functionName = node.name || 'fallback';
-        const cfg = buildCFGForFunction(node, functionName);
-        
-        if (cfg.nodes.length > 0) {
-          functionGraphs.push({
-            name: functionName,
-            ...cfg,
-          });
-        }
+      ContractDefinition(node) {
+        currentContractName = node.name || '';
+        const subs = Array.isArray(node.subNodes) ? node.subNodes : [];
+        subs.forEach((child) => {
+          if (child && child.type === 'FunctionDefinition') {
+            const functionName = child.name || 'fallback';
+            const cfg = buildCFGForFunction(child, functionName, currentContractName);
+            if (cfg.nodes.length > 0) {
+              functionGraphs.push({
+                name: functionName,
+                contractName: currentContractName,
+                ...cfg,
+              });
+            }
+          }
+        });
+        currentContractName = '';
       },
     });
 
@@ -50,6 +58,7 @@ export function parseSolidityCode(code) {
         type: 'default',
         data: { 
           label: `Function: ${funcGraph.name}`,
+          contractName: funcGraph.contractName,
           startLine: 1,
           endLine: 1,
         },
@@ -86,7 +95,7 @@ export function parseSolidityCode(code) {
   }
 }
 
-function buildCFGForFunction(functionNode, functionName) {
+function buildCFGForFunction(functionNode, functionName, contractName) {
   const nodes = [];
   const edges = [];
   
@@ -99,6 +108,7 @@ function buildCFGForFunction(functionNode, functionName) {
     type: 'entry',
     data: { 
       label: `Entry: ${functionName}`,
+      contractName,
       startLine: functionNode.loc?.start.line,
       endLine: functionNode.loc?.start.line,
     },
@@ -116,7 +126,8 @@ function buildCFGForFunction(functionNode, functionName) {
       200,
       yPosition,
       nodes,
-      edges
+      edges,
+      contractName
     );
     currentNodeId = statementResult.lastNodeId;
     yPosition = statementResult.yPosition;
@@ -128,6 +139,7 @@ function buildCFGForFunction(functionNode, functionName) {
     type: 'exit',
     data: { 
       label: `Exit: ${functionName}`,
+      contractName,
       startLine: functionNode.loc?.end.line,
       endLine: functionNode.loc?.end.line,
     },
@@ -147,12 +159,12 @@ function buildCFGForFunction(functionNode, functionName) {
   return { nodes, edges };
 }
 
-function processStatements(statements, prevNodeId, exitId, xPosition, yPosition, nodes, edges) {
+function processStatements(statements, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName) {
   let currentNodeId = prevNodeId;
   let currentY = yPosition;
 
   statements.forEach((stmt) => {
-    const result = processStatement(stmt, currentNodeId, exitId, xPosition, currentY, nodes, edges);
+    const result = processStatement(stmt, currentNodeId, exitId, xPosition, currentY, nodes, edges, contractName);
     currentNodeId = result.lastNodeId;
     currentY = result.yPosition;
   });
@@ -160,14 +172,14 @@ function processStatements(statements, prevNodeId, exitId, xPosition, yPosition,
   return { lastNodeId: currentNodeId, yPosition: currentY };
 }
 
-function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges) {
+function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName) {
   switch (stmt.type) {
     case 'IfStatement':
-      return processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges);
+      return processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName);
     
     case 'WhileStatement':
     case 'ForStatement':
-      return processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges);
+      return processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName);
     
     case 'ReturnStatement':
       const returnNodeId = getNodeId();
@@ -176,11 +188,12 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
         type: 'default',
         data: { 
           label: 'Return',
+          contractName,
           startLine: stmt.loc?.start.line,
           endLine: stmt.loc?.end.line,
         },
         position: { x: xPosition, y: yPosition },
-        style: { background: '#ffc107', border: '2px solid #ff9800' },
+        style: { background: '#ffc107', border: '2px solid #ff9800', color: '#0b1020' },
       });
       
       edges.push({
@@ -209,6 +222,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
         type: 'default',
         data: { 
           label,
+          contractName,
           startLine: stmt.loc?.start.line,
           endLine: stmt.loc?.end.line,
         },
@@ -226,7 +240,7 @@ function processStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes,
   }
 }
 
-function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges) {
+function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName) {
   // Condition node
   const conditionNodeId = getNodeId();
   nodes.push({
@@ -234,6 +248,7 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
     type: 'default',
     data: { 
       label: 'If condition',
+      contractName,
       startLine: stmt.loc?.start.line,
       endLine: stmt.loc?.start.line,
     },
@@ -256,11 +271,12 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
     type: 'default',
     data: { 
       label: 'True',
+      contractName,
       startLine: stmt.trueBody?.loc?.start.line,
       endLine: stmt.trueBody?.loc?.start.line,
     },
     position: { x: xPosition - 150, y: trueY },
-    style: { background: '#e8f5e9' },
+    style: { background: '#e8f5e9', color: '#0b1020' },
   });
 
   edges.push({
@@ -270,12 +286,13 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
     type: 'smoothstep',
     label: 'true',
     style: { stroke: '#4caf50' },
+    labelStyle: { fill: '#e6e8ee' },
   });
 
   let trueEndNodeId = trueBranchId;
   if (stmt.trueBody) {
     const trueStatements = stmt.trueBody.type === 'Block' ? stmt.trueBody.statements : [stmt.trueBody];
-    const result = processStatements(trueStatements, trueBranchId, exitId, xPosition - 150, trueY + 100, nodes, edges);
+    const result = processStatements(trueStatements, trueBranchId, exitId, xPosition - 150, trueY + 100, nodes, edges, contractName);
     trueEndNodeId = result.lastNodeId;
   }
 
@@ -291,11 +308,12 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
       type: 'default',
       data: { 
         label: 'False',
+        contractName,
         startLine: stmt.falseBody?.loc?.start.line,
         endLine: stmt.falseBody?.loc?.start.line,
       },
       position: { x: xPosition + 150, y: falseY },
-      style: { background: '#ffebee' },
+      style: { background: '#ffebee', color: '#0b1020' },
     });
 
     edges.push({
@@ -305,10 +323,11 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
       type: 'smoothstep',
       label: 'false',
       style: { stroke: '#f44336' },
+      labelStyle: { fill: '#e6e8ee' },
     });
 
     const falseStatements = stmt.falseBody.type === 'Block' ? stmt.falseBody.statements : [stmt.falseBody];
-    const result = processStatements(falseStatements, falseBranchId, exitId, xPosition + 150, falseY + 100, nodes, edges);
+    const result = processStatements(falseStatements, falseBranchId, exitId, xPosition + 150, falseY + 100, nodes, edges, contractName);
     falseEndNodeId = result.lastNodeId;
     maxY = Math.max(maxY, result.yPosition);
   } else {
@@ -332,6 +351,7 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
     type: 'default',
     data: { 
       label: 'Merge',
+      contractName,
       startLine: stmt.loc?.end.line,
       endLine: stmt.loc?.end.line,
     },
@@ -365,7 +385,7 @@ function processIfStatement(stmt, prevNodeId, exitId, xPosition, yPosition, node
   return { lastNodeId: mergeNodeId, yPosition: maxY + 100 };
 }
 
-function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges) {
+function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, nodes, edges, contractName) {
   // Loop condition node
   const conditionNodeId = getNodeId();
   nodes.push({
@@ -373,6 +393,7 @@ function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, no
     type: 'default',
     data: { 
       label: `${stmt.type === 'WhileStatement' ? 'While' : 'For'} condition`,
+      contractName,
       startLine: stmt.loc?.start.line,
       endLine: stmt.loc?.start.line,
     },
@@ -395,6 +416,7 @@ function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, no
     type: 'default',
     data: { 
       label: 'Loop body',
+      contractName,
       startLine: stmt.body?.loc?.start.line,
       endLine: stmt.body?.loc?.end.line,
     },
@@ -408,12 +430,13 @@ function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, no
     type: 'smoothstep',
     label: 'true',
     style: { stroke: '#4caf50' },
+    labelStyle: { fill: '#e6e8ee' },
   });
 
   let bodyEndNodeId = bodyNodeId;
   if (stmt.body) {
     const bodyStatements = stmt.body.type === 'Block' ? stmt.body.statements : [stmt.body];
-    const result = processStatements(bodyStatements, bodyNodeId, exitId, xPosition - 100, bodyY + 100, nodes, edges);
+    const result = processStatements(bodyStatements, bodyNodeId, exitId, xPosition - 100, bodyY + 100, nodes, edges, contractName);
     bodyEndNodeId = result.lastNodeId;
   }
 
@@ -433,6 +456,7 @@ function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, no
     type: 'default',
     data: { 
       label: 'Exit loop',
+      contractName,
       startLine: stmt.loc?.end.line,
       endLine: stmt.loc?.end.line,
     },
@@ -446,6 +470,7 @@ function processLoopStatement(stmt, prevNodeId, exitId, xPosition, yPosition, no
     type: 'smoothstep',
     label: 'false',
     style: { stroke: '#f44336' },
+    labelStyle: { fill: '#e6e8ee' },
   });
 
   return { lastNodeId: exitLoopNodeId, yPosition: bodyY + 200 };
