@@ -58,12 +58,12 @@
 }
 
 .react-flow__edge-path {
-  stroke: #3a4660;
+  stroke: #c757ff; /* Bright neon purple for edges */
   stroke-width: 2;
 }
 /* Labels on edges in dark mode */
 .react-flow__edge-text {
-  fill: #e6e8ee !important;
+  fill: #1a1a1a !important;
 }
 
 /* Strengthen accent purple for ATTT style */
@@ -71,12 +71,12 @@
 .react-flow__controls button {
   background: #0f2418;
   border: 1px solid #1f6b3a;
-  color: #e8fff2;
+  color: #00ff80; /* Bright neon green for + - symbols */
 }
 
 .react-flow__controls button:hover {
   background: #134a29;
-  color: #ffffff;
+  color: #00ff80; /* Keep bright neon green on hover */
   border-color: #26a269;
   box-shadow: 0 0 0 2px rgba(38, 162, 105, 0.25);
 }
@@ -84,9 +84,21 @@
 .react-flow__controls button:active {
   background: #0e3b23;
   border-color: #1b9e67;
+  color: #00ff80; /* Keep bright neon green on active */
+}
+
+/* Force bright neon green for all icons and symbols inside control buttons */
+.react-flow__controls button svg,
+.react-flow__controls button *,
+.react-flow__controls button::before,
+.react-flow__controls button::after {
+  color: #00ff80 !important;
+  fill: #00ff80 !important;
+  stroke: #00ff80 !important;
 }
 
 .react-flow__edge.animated .react-flow__edge-path {
+  stroke: #c757ff; /* Keep neon purple for animated edges */
   stroke-dasharray: 5;
   animation: dashdraw 0.5s linear infinite;
 }
