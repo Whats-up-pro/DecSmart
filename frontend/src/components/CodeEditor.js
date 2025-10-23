@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './CodeEditor.css';
 
-function CodeEditor({ value, onChange, selectedNode }) {
+function CodeEditor({ value, onChange, selectedNode, highlightedLine }) {
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
   const textareaRef = useRef(null);
 
@@ -67,6 +67,34 @@ function CodeEditor({ value, onChange, selectedNode }) {
       // ignore browsers that might not support setSelectionRange on some inputs
     }
   }, [selectedNode, value]);
+
+  // Highlight vulnerability line by selecting it
+  useEffect(() => {
+    if (highlightedLine && textareaRef.current) {
+      const lines = value.split('\n');
+      const lineIndex = highlightedLine - 1;
+      
+      if (lineIndex >= 0 && lineIndex < lines.length) {
+        // Calculate character position
+        let charStart = 0;
+        for (let i = 0; i < lineIndex; i++) {
+          charStart += lines[i].length + 1; // +1 for newline
+        }
+        
+        const charEnd = charStart + lines[lineIndex].length;
+        const el = textareaRef.current;
+        
+        // Focus and select the line
+        el.focus();
+        el.setSelectionRange(charStart, charEnd);
+        
+        // Scroll into view
+        const lineHeight = 21; // line-height 1.5 * font-size 14px
+        const scrollTop = Math.max(0, (lineIndex * lineHeight) - 150);
+        el.scrollTop = scrollTop;
+      }
+    }
+  }, [highlightedLine, value]);
 
   return (
     <div className="code-editor">

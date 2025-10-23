@@ -42,6 +42,11 @@ function CFGVisualizer({ cfgData, onNodeClick }) {
       if (onNodeClick) {
         onNodeClick(node.data);
       }
+      
+      // Show vulnerability info if available
+      if (node.data?.vulnerable && node.data?.vulnerabilities) {
+        console.log('Node vulnerabilities:', node.data.vulnerabilities);
+      }
     },
     [onNodeClick]
   );
@@ -144,6 +149,18 @@ function CFGVisualizer({ cfgData, onNodeClick }) {
         <Controls />
         <MiniMap 
           nodeStrokeColor={(n) => {
+            // Highlight vulnerable nodes in minimap
+            if (n?.data?.vulnerable) {
+              const severityColors = {
+                'critical': '#d32f2f',
+                'high': '#f57c00',
+                'medium': '#fbc02d',
+                'low': '#7cb342',
+                'info': '#0288d1'
+              };
+              return severityColors[n.data.severity] || '#d32f2f';
+            }
+            
             const border = n?.style?.border;
             if (typeof border === 'string' && border.trim()) {
               const parts = border.split(' ');
@@ -154,6 +171,18 @@ function CFGVisualizer({ cfgData, onNodeClick }) {
             return '#666';
           }}
           nodeColor={(n) => {
+            // Color vulnerable nodes in minimap
+            if (n?.data?.vulnerable) {
+              const severityColors = {
+                'critical': 'rgba(211, 47, 47, 0.3)',
+                'high': 'rgba(245, 124, 0, 0.3)',
+                'medium': 'rgba(251, 192, 45, 0.3)',
+                'low': 'rgba(124, 179, 66, 0.3)',
+                'info': 'rgba(2, 136, 209, 0.3)'
+              };
+              return severityColors[n.data.severity] || 'rgba(211, 47, 47, 0.3)';
+            }
+            
             if (n?.style?.background) return n.style.background;
             if (n.type === 'entry') return '#e3f2fd';
             if (n.type === 'exit') return '#fce4ec';

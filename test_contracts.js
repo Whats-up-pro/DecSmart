@@ -293,3 +293,4 @@ console.log('✓ Mapping Operations');
 export { results, totalContracts, totalFunctions, totalIfStatements, totalWhileLoops, totalForLoops };
 
 
+

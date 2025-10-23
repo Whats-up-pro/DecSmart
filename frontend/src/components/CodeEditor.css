@@ -23,7 +23,11 @@
 
 .code-textarea:focus {
   outline: none;
-  border: 2px solid #667eea;
+}
+
+.code-textarea::selection {
+  background-color: #ffd700;
+  color: #000000;
 }
 
 .selected-info {
@@ -38,14 +42,4 @@
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10;
-}
-
-.highlighted-line {
-  background-color: rgba(255, 200, 0, 0.3);
-}
-
-.highlighted-glyph {
-  background-color: #ffc800;
-  width: 5px !important;
-  margin-left: 3px;
 }
