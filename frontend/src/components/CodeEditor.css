@@ -21,7 +21,7 @@
   tab-size: 2;
 }
 
-.code-textarea:focus {
+.code-textarea:focus { 
   outline: none;
 }
 
