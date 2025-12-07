@@ -3,8 +3,19 @@ Security Vulnerability Analyzer for Solidity Smart Contracts
 Analyzes AST and CFG to detect common vulnerabilities
 """
 import re
+import os
+import torch
 from typing import List, Dict, Any, Set
 
+# GNN Imports
+try:
+    from model.gnn import HiFiGAT
+    from model.preprocess import CFGBuilder
+    import solcx
+    GNN_AVAILABLE = True
+except ImportError:
+    GNN_AVAILABLE = False
+    print("GNN dependencies not found. Running in regex-only mode.")
 
 class Vulnerability:
     """Represents a detected security vulnerability"""
@@ -41,7 +52,23 @@ class SecurityAnalyzer:
     def __init__(self):
         self.vulnerabilities: List[Vulnerability] = []
         self.visited_nodes: Set[str] = set()
-    
+        
+        # Initialize GNN Model if available
+        self.gnn_model = None
+        self.cfg_builder = None
+        if GNN_AVAILABLE:
+            try:
+                self.cfg_builder = CFGBuilder()
+                model_path = "./saved_models/hifi_gat.pth"
+                if os.path.exists(model_path):
+                    # num_node_features must match vocab_size in preprocess.py (150)
+                    self.gnn_model = HiFiGAT(num_node_features=150, hidden_channels=32, num_classes=2)
+                    self.gnn_model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+                    self.gnn_model.eval()
+                    print("HiFi-GAT model loaded successfully.")
+            except Exception as e:
+                print(f"Failed to load GNN model: {e}")
+
     def analyze(self, code: str, ast_data: Dict = None, cfg_data: Dict = None) -> Dict[str, Any]:
         """
         Analyze Solidity code for security vulnerabilities
@@ -72,6 +99,10 @@ class SecurityAnalyzer:
         # Analyze CFG if provided
         if cfg_data and 'nodes' in cfg_data:
             self._analyze_cfg(cfg_data, code)
+            
+        # Run GNN Analysis if model is loaded
+        if self.gnn_model:
+            self._analyze_with_gnn(code)
         
         return {
             "vulnerabilities": [v.to_dict() for v in self.vulnerabilities],
@@ -79,6 +110,57 @@ class SecurityAnalyzer:
             "score": self._calculate_security_score()
         }
     
+    def _analyze_with_gnn(self, code: str):
+        """Run HiFi-GAT model on the code"""
+        try:
+            bytecode = self._compile_to_bytecode(code)
+            if not bytecode:
+                return
+
+            instructions = self.cfg_builder.disassemble(bytecode)
+            cfg = self.cfg_builder.build_cfg(instructions)
+            data = self.cfg_builder.graph_to_data(cfg)
+            
+            # Add batch dimension
+            data.batch = torch.zeros(data.x.size(0), dtype=torch.long)
+            
+            with torch.no_grad():
+                output = self.gnn_model(data.x, data.edge_index, data.batch)
+                probs = torch.exp(output)
+                vuln_prob = probs[0][1].item() # Assuming class 1 is vulnerable
+                
+            if vuln_prob > 0.5:
+                self.vulnerabilities.append(Vulnerability(
+                    vuln_type="AI Detected Vulnerability",
+                    severity=Vulnerability.SEVERITY_HIGH,
+                    line=1, # GNN doesn't give line numbers easily without attention map analysis
+                    description=f"HiFi-GAT Model detected a potential vulnerability with confidence {vuln_prob:.2f}",
+                    recommendation="Review code logic manually. The AI model flagged this contract as suspicious."
+                ))
+                
+        except Exception as e:
+            print(f"GNN Analysis failed: {e}")
+
+    def _compile_to_bytecode(self, code: str) -> str:
+        """Compile Solidity code to bytecode using py-solc-x"""
+        try:
+            if not solcx.get_installed_solc_versions():
+                solcx.install_solc('0.8.0')
+            
+            compiled = solcx.compile_source(
+                code,
+                output_values=['bin'],
+                solc_version='0.8.0'
+            )
+            
+            # Get the first contract's bytecode
+            for contract_id, contract_interface in compiled.items():
+                return contract_interface['bin']
+                
+        except Exception as e:
+            print(f"Compilation failed: {e}")
+            return None
+
     def _analyze_cfg(self, cfg_data: Dict, code: str):
         """Analyze control flow graph for vulnerabilities"""
         nodes = cfg_data.get('nodes', [])

@@ -1,3 +1,10 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
 python-dotenv==1.0.1
+torch
+torch-geometric
+networkx
+gensim
+pyevmasm
+py-solc-x
+scikit-learn
