@@ -43,3 +43,7 @@ coverage/
 # Documents
 *.pdf
 *.csv
+
+#Data
+*.csv
+*.zip
