@@ -45,5 +45,5 @@ coverage/
 *.csv
 
 #Data
-*.csv
+contract.csv
 *.zip
