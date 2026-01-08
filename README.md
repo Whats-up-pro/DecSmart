@@ -229,13 +229,3 @@ curl -X POST http://localhost:5000/api/v1/analyze \
 ## 📝 License
 
 MIT
-
-## 👥 Contributors
-
-UIT - NT547 Course Project
-
-## 🙏 Acknowledgments
-
-- @solidity-parser/parser for Solidity parsing
-- React Flow for graph visualization
-- PyTorch Geometric for GNN implementation
