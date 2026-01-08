@@ -1,157 +1,219 @@
-# NT547 - CFG Visualizer for Solidity Smart Contracts
+# DecSmart - Smart Contract Vulnerability Detection
 
-D02: Công cụ Trực quan hóa Đồ thị Luồng Điều khiển (CFG) cho Hợp đồng Thông minh
+**CFG Visualizer & Security Analyzer for Solidity Smart Contracts**
+
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![Node.js](https://img.shields.io/badge/Node.js-14+-green.svg)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://reactjs.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0-black.svg)](https://flask.palletsprojects.com)
 
 ## 📖 Overview
 
-A web-based tool that allows users to paste Solidity source code and receive an interactive, visual representation of the Control Flow Graph (CFG) for functions in the contract. This is an essential tool for security analysts and developers to understand the execution logic of smart contracts.
+A web-based tool for **smart contract security analysis** that combines:
+- **Control Flow Graph (CFG)** visualization
+- **AI-powered vulnerability detection** using HiFi-GAT GNN model
+- **Pattern-based security analysis** for common vulnerabilities
 
-## ✨ Features
+---
 
-- **Input Interface**: Simple web interface with a code editor for pasting Solidity source code
-- **Syntax Parsing**: Uses @solidity-parser/parser to convert source code to Abstract Syntax Tree (AST)
-- **CFG Construction**: Logic to traverse the AST, identify functions, basic blocks, and control flow transfer points
-- **Visualization**: Graph visualization using React Flow with interactive features
-- **Interactive**: Click on graph nodes to highlight corresponding code lines in the editor
+## 🏗️ System Architecture
 
-## 🏗️ Architecture
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND LAYER                               │
+│                        (React - Port 3000)                           │
+├─────────────────┬─────────────────────────┬─────────────────────────┤
+│   CodeEditor    │    CFGVisualizer        │   VulnerabilityPanel    │
+│   (Monaco)      │    (ReactFlow)          │   (Results Display)     │
+└────────┬────────┴────────────┬────────────┴────────────┬────────────┘
+         │                     │                         │
+         │         POST /api/v1/analyze                  │
+         │         POST /api/v1/cfg                      │
+         └─────────────────────┼─────────────────────────┘
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                         BACKEND LAYER                                │
+│                       (Flask - Port 5000)                            │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────┐    ┌──────────────────┐    ┌───────────────────┐   │
+│  │  Flask API  │───▶│ SecurityAnalyzer │───▶│  HiFi-GAT Model   │   │
+│  │  Gateway    │    │                  │    │  (GNN Inference)  │   │
+│  └─────────────┘    │  - Regex Pattern │    └───────────────────┘   │
+│                     │  - CFG Analysis  │                             │
+│  ┌─────────────┐    │  - GNN Inference │    ┌───────────────────┐   │
+│  │ node_helper │    └──────────────────┘    │    CFGBuilder     │   │
+│  │ (Solidity   │                            │  (EVM Bytecode →  │   │
+│  │  Parser)    │                            │   HiFi-CFG)       │   │
+│  └─────────────┘                            └───────────────────┘   │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
 
-The project is structured into two main components:
+---
 
-### Backend (Python Flask)
-- Simple REST API for health checks
-- Extensible for future server-side processing
-- CORS enabled for frontend communication
+## 📂 Project Structure
 
-### Frontend (React)
-- Monaco editor for code editing with Solidity syntax highlighting
-- @solidity-parser/parser for AST generation
-- Custom CFG builder logic
-- React Flow for graph visualization
-- Interactive node-to-code highlighting
+```
+NT547/
+├── backend/                    # Python Flask Backend
+│   ├── app.py                  # Flask app factory
+│   ├── api/
+│   │   ├── __init__.py         # Blueprint registration
+│   │   └── routes.py           # API endpoints (/cfg, /analyze)
+│   ├── model/
+│   │   ├── gnn.py              # HiFi-GAT neural network model
+│   │   ├── preprocess.py       # CFGBuilder (bytecode → graph)
+│   │   ├── train.py            # Model training script
+│   │   └── dataset.py          # Dataset loader
+│   ├── security_analyzer.py    # Vulnerability detection engine
+│   ├── node_helper/            # Node.js Solidity parser
+│   │   └── index.js            # AST/CFG generation
+│   ├── saved_models/
+│   │   └── hifi_gat.pth        # Pre-trained GNN model
+│   └── requirements.txt
+│
+├── frontend/                   # React Frontend
+│   ├── src/
+│   │   ├── App.js              # Main application
+│   │   ├── components/
+│   │   │   ├── CodeEditor.js   # Monaco editor
+│   │   │   └── CFGVisualizer.js# ReactFlow graph
+│   │   └── utils/
+│   │       └── parser.js       # Client-side Solidity parser
+│   └── package.json
+│
+└── README.md
+```
+
+---
+
+## 🔧 Technology Stack
+
+### Backend Layer
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Web Framework** | Flask 3.0 | REST API server |
+| **GNN Model** | PyTorch + PyG | HiFi-GAT vulnerability detection |
+| **Bytecode Analysis** | pyevmasm | EVM disassembly |
+| **Solidity Compiler** | py-solc-x | Source → Bytecode |
+| **Parser** | Node.js + @solidity-parser | AST/CFG generation |
+
+### Frontend Layer
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **UI Framework** | React 18 | Component-based UI |
+| **Code Editor** | Monaco Editor | Syntax highlighting, line navigation |
+| **Graph Visualization** | ReactFlow 11 | Interactive CFG display |
+| **HTTP Client** | Axios | API communication |
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- **Python 3.10+**
+- **Node.js 14+**
+- **npm**
 
-- **Python 3.8+** (for backend)
-- **Node.js 14+** (for frontend)
-- **npm** or **yarn**
+### 1. Backend Setup
 
-> **Windows Users**: See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for detailed Windows-specific setup instructions.
-
-### Backend Setup
-
-1. Navigate to the backend directory:
 ```bash
 cd backend
-```
 
-2. Install Python dependencies:
-```bash
+# Install Python dependencies
 pip install -r requirements.txt
-```
 
-3. Run the backend server:
-```bash
+# Install Node helper
+cd node_helper && npm ci && cd ..
+
+# Start server
 python app.py
 ```
 
-The backend will run on `http://localhost:5000`
+Backend runs on `http://localhost:5000`
 
-### Frontend Setup
+### 2. Frontend Setup
 
-1. Navigate to the frontend directory:
 ```bash
 cd frontend
-```
 
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Start the development server:
-```bash
+# Start development server
 npm start
 ```
 
-The frontend will open at `http://localhost:3000`
+Frontend opens at `http://localhost:3000`
 
-## 📁 Project Structure
+---
 
-```
-NT547/
-├── backend/              # Python Flask backend
-│   ├── app.py           # Main Flask application
-│   ├── requirements.txt # Python dependencies
-│   └── README.md        # Backend documentation
-│
-├── frontend/            # React frontend
-│   ├── public/          # Static files
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   │   ├── CodeEditor.js      # Monaco editor wrapper
-│   │   │   └── CFGVisualizer.js   # React Flow visualization
-│   │   ├── utils/
-│   │   │   └── parser.js          # Solidity parser & CFG builder
-│   │   ├── App.js       # Main application
-│   │   └── index.js     # Entry point
-│   ├── package.json
-│   └── README.md        # Frontend documentation
-│
-└── README.md           # This file
+## � API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/api/v1/cfg` | POST | Build CFG from Solidity code |
+| `/api/v1/analyze` | POST | Security analysis (CFG + Vulnerabilities) |
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:5000/api/v1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"code": "pragma solidity ^0.8.0; contract Test { ... }"}'
 ```
 
-## 🎯 Usage
+### Response Format
 
-1. **Start both backend and frontend servers** (see Quick Start above)
-2. **Open the application** in your browser at `http://localhost:3000`
-3. **Enter Solidity code** in the left editor panel (or use the provided sample)
-4. **Click "Generate CFG"** to create the control flow graph
-5. **Interact with the graph**: 
-   - Click nodes to highlight corresponding code
-   - Zoom and pan the graph
-   - Use the minimap for navigation
+```json
+{
+  "vulnerabilities": [
+    {
+      "type": "Reentrancy",
+      "severity": "critical",
+      "line": 15,
+      "description": "...",
+      "recommendation": "..."
+    }
+  ],
+  "cfg": { "nodes": [...], "edges": [...] },
+  "score": 75,
+  "summary": { "bySeverity": {...}, "byType": {...} }
+}
+```
 
-## 🔧 Technologies Used
+---
 
-### Frontend
-- **React 18**: UI framework
-- **@solidity-parser/parser**: Solidity AST parsing
-- **React Flow**: Graph visualization
-- **Monaco Editor**: Code editor with syntax highlighting
-- **Axios**: HTTP client
+## 🛡️ Vulnerability Detection
 
-### Backend
-- **Flask**: Python web framework
-- **Flask-CORS**: CORS support
+### Detection Methods
 
-## 📊 CFG Features
+1. **Regex Pattern Matching**: Fast detection of common patterns
+2. **CFG Analysis**: Unreachable code, infinite loops
+3. **HiFi-GAT GNN**: AI-based detection on bytecode CFG
 
-### Node Types
-- **Entry/Exit**: Function boundaries
-- **Condition**: If/While/For conditions
-- **Branch**: True/False paths
-- **Merge**: Convergence points
-- **Return**: Return statements
-- **Statement**: Regular code blocks
+### Supported Vulnerabilities
 
-### Supported Constructs
-- Function definitions
-- If/Else statements
-- While loops
-- For loops
-- Return statements
-- Variable declarations
-- Expression statements
-- Nested control structures
+| Type | Severity | Detection Method |
+|------|----------|------------------|
+| Reentrancy | Critical | Regex + GNN |
+| Unprotected Selfdestruct | Critical | Regex |
+| Unchecked Call Return | High | Regex |
+| Delegatecall | High | Regex |
+| Integer Overflow | High | Regex |
+| tx.origin Auth | Medium | Regex |
+| Timestamp Dependence | Medium | Regex |
+| DoS with Gas Limit | Medium | Regex + CFG |
+| Missing Access Control | High | Regex |
+| Unreachable Code | Info | CFG |
 
-## 🖼️ Screenshots
+---
 
-(Screenshots will be added after deployment)
-
-## 🖼️ Screenshots
+## � Screenshots
 
 ### Initial Interface
 ![CFG Visualizer Initial View](https://github.com/user-attachments/assets/af5b4545-45c9-4a2d-a7d6-a5ffb2945c08)
@@ -161,21 +223,8 @@ NT547/
 
 ### Interactive Node Selection
 ![Interactive Feature](https://github.com/user-attachments/assets/52245b2d-8e4d-4a70-a778-031130d04a94)
-*Clicking on nodes highlights corresponding code lines*
 
-## 🛠️ Development
-
-### Running Tests
-```bash
-cd frontend
-npm test
-```
-
-### Building for Production
-```bash
-cd frontend
-npm run build
-```
+---
 
 ## 📝 License
 
@@ -187,6 +236,6 @@ UIT - NT547 Course Project
 
 ## 🙏 Acknowledgments
 
-- @solidity-parser/parser for Solidity parsing capabilities
-- React Flow for excellent graph visualization
-- Monaco Editor for the code editing experience
+- @solidity-parser/parser for Solidity parsing
+- React Flow for graph visualization
+- PyTorch Geometric for GNN implementation
